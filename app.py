@@ -37,11 +37,11 @@ def convert_str_to_latex(formula: str) -> str:
     """
     Converts the formula string into its latex equivalent so it can be displayed.
     """
-    characters_to_remove = ("$")
+    characters_to_remove = ("$_")
     latex_formula = formula.replace("*", " \\times ")
     latex_formula = latex_formula.replace("/", " \\div ")
     for c in characters_to_remove:
-        latex_formula = latex_formula.replace(c, "")
+        latex_formula = latex_formula.replace(c, " ")
     
     return latex_formula
   
