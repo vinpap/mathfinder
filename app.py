@@ -18,10 +18,14 @@ def find_formula(dataframe: pd.DataFrame, feature_columns: str, target_columns: 
     """
     Uses the model to find the formula that best fits the data.
     """
-    X, y = prepare_data(dataframe, feature_columns, target_columns)
-    print("Training")
-    train_model(X, y)
-    st.balloons()
+    try:
+        X, y = prepare_data(dataframe, feature_columns, target_columns)
+        print("Training")
+        train_model(X, y)
+        st.balloons()
+    except ValueError:
+        st.error("ValueError")
+
 
 def prepare_data(dataframe: pd.DataFrame, feature_columns: str, target_columns: str):
     """
