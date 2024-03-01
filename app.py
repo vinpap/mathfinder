@@ -65,7 +65,7 @@ def train_model(X, y):
 
     left_co, cent_co, last_co = st.columns(3)
     with cent_co:
-        with st.spinner("The model is looking for the math formulas that best describe your data. This might take a few minutes, do not close this page"):  
+        with st.spinner("The model is looking for the formula that best describes your data. This might take a few minutes, do not close this page"):  
             model.fit(X, y)
         
     c = st.container()
