@@ -21,7 +21,7 @@ def find_formula(dataframe: pd.DataFrame, feature_columns: str, target_columns: 
     X, y = prepare_data(dataframe, feature_columns, target_columns)
     print("Training")
     train_model(X, y)
-    st.balloons()
+    
 
 def prepare_data(dataframe: pd.DataFrame, feature_columns: str, target_columns: str):
     """
@@ -72,7 +72,17 @@ def train_model(X, y):
     left_co, cent_co, last_co = st.columns(3)
     with cent_co:
         with st.spinner("The model is looking for the math formulas that best describe your data. This might take a few minutes, do not close this page"):  
-            model.fit(X, y)
+            try:
+                model.fit(X, y)
+                st.balloons()
+            except ValueError:
+                # If there was an issue during training
+
+                # Is there more than one target?
+                if len(y.shape) != 1:
+                    msg_error = "Mathfinder can only work with one target value at a time. Please spcecify only one target column."
+                st.error(msg_error)
+                return
         
     c = st.container()
     for formula in model.formulas:
