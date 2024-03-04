@@ -19,8 +19,8 @@ def find_formula(dataframe: pd.DataFrame, feature_columns: str, target_columns: 
     Uses the model to find the formula that best fits the data.
     """
     X, y = prepare_data(dataframe, feature_columns, target_columns)
-    print("Training")
-    train_model(X, y)
+    if type(X) != bool:
+        train_model(X, y)
     
 
 def prepare_data(dataframe: pd.DataFrame, feature_columns: str, target_columns: str):
@@ -34,9 +34,15 @@ def prepare_data(dataframe: pd.DataFrame, feature_columns: str, target_columns: 
     t_headers = target_columns.split(";")
     for i in range(len(t_headers)):
         t_headers[i] = t_headers[i].strip()
-        
-    X = dataframe[f_headers]
-    y = dataframe[t_headers]  
+    
+    try:
+        X = dataframe[f_headers]
+        y = dataframe[t_headers]
+    except KeyError:
+        msg_error = "An error occured while retrieving the data from the columns you specified. Make sure you entered the column names properly."
+        st.error(msg_error)
+        return False, False
+
     return X, y 
 
 def convert_str_to_latex(formula: str) -> str:
