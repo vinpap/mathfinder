@@ -28,7 +28,13 @@ def prepare_data(dataframe: pd.DataFrame, feature_columns: str, target_columns: 
     Retrieves the data in the columns required by the user.
     """
     f_headers = feature_columns.split(";")
+    for i in range(len(f_headers)):
+        f_headers[i] = f_headers[i].strip()
+
     t_headers = target_columns.split(";")
+    for i in range(len(t_headers)):
+        t_headers[i] = t_headers[i].strip()
+        
     X = dataframe[f_headers]
     y = dataframe[t_headers]  
     return X, y 
