@@ -1,3 +1,6 @@
+import pickle
+import os
+
 import streamlit as st
 import pandas as pd
 from sblearn.models import SymbolicRegressor
@@ -14,10 +17,14 @@ uploaded_file = st.file_uploader(
     label="Upload the CSV file that contains your data here"
 )
 
-def find_formula(dataframe: pd.DataFrame, feature_columns: str, target_columns: str):
+def find_formula(dataframe: pd.DataFrame, feature_columns: str, target_columns: str, overwrite_model: str):
     """
     Uses the model to find the formula that best fits the data.
     """
+    if not overwrite_model and os.path.exists(f"models/{model_name}.pkl") and os.path.isfile(f"models/{model_name}.pkl"):
+        st.error(f"A model named {model_name} already exists. Tick the box 'overwrite any existing model' in the form below if you want to overwrite it.")
+        return
+
     X, y = prepare_data(dataframe, feature_columns, target_columns)
     if type(X) != bool:
         train_model(X, y)
@@ -104,7 +111,11 @@ def train_model(X, y):
             formula = formula.replace(m, column_values_mapping[m])
         latex_formula = convert_str_to_latex(formula)
         c.latex(latex_formula)
-    st.info("In order to ensure the best performance for your model, please upload testing data using the test page. More info on the homepage.")  
+    st.info("In order to ensure the best performance for your model, please upload testing data using the test page. More info on the homepage.")
+
+    with open(f"models/{model_name}.pkl", "wb") as model_file:
+        pickle.dump(model, model_file)
+
     
 
 
@@ -124,11 +135,11 @@ if uploaded_file:
     model_name = st.text_input(
         label="Enter the name you want to give to your model"
     )
-    # Penser à ajouter une vérification sur le nom du modèle -> s'il existe déjà
-    # on affiche un message d'erreur
+    overwrite = st.checkbox('Overwrite any existing model')
     kwargs = {
         "dataframe": df,
         "feature_columns": feature_column_names,
         "target_columns": target_column_names,
+        "overwrite_model": overwrite
     }
     st.button(label="Train the model", on_click=find_formula, kwargs=kwargs)
