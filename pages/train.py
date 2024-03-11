@@ -96,13 +96,15 @@ def train_model(X, y):
                 msg_error = "Your dataset contains some data that cannot be processed. Please ensure it contains only numerical values and make sure no value is missing."
                 st.error(msg_error)
                 return
-            
+
+    st.info("Your model has been trained! It has found the formula below:")      
     c = st.container()
     for formula in model.formulas:
         for m in column_values_mapping:
             formula = formula.replace(m, column_values_mapping[m])
         latex_formula = convert_str_to_latex(formula)
         c.latex(latex_formula)
+    st.info("In order to ensure the best performance for your model, please upload testing data using the test page. More info on the homepage.")  
     
 
 
@@ -119,6 +121,11 @@ if uploaded_file:
     target_column_names = st.text_input(
         label="Enter the name of the target column"
     )
+    model_name = st.text_input(
+        label="Enter the name you want to give to your model"
+    )
+    # Penser à ajouter une vérification sur le nom du modèle -> s'il existe déjà
+    # on affiche un message d'erreur
     kwargs = {
         "dataframe": df,
         "feature_columns": feature_column_names,
