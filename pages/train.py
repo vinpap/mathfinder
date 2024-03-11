@@ -17,7 +17,7 @@ uploaded_file = st.file_uploader(
     label="Upload the CSV file that contains your data here"
 )
 
-def find_formula(dataframe: pd.DataFrame, feature_columns: str, target_columns: str, overwrite_model: str):
+def find_formula(dataframe: pd.DataFrame, feature_columns: str, target_columns: str, model_name: str, overwrite_model: str):
     """
     Uses the model to find the formula that best fits the data.
     """
@@ -111,7 +111,7 @@ def train_model(X, y):
             formula = formula.replace(m, column_values_mapping[m])
         latex_formula = convert_str_to_latex(formula)
         c.latex(latex_formula)
-    st.info("In order to ensure the best performance for your model, please upload testing data using the test page. More info on the homepage.")
+    st.info("In order to ensure the best performance for your model, please upload testing data. More info on the homepage.")
 
     with open(f"models/{model_name}.pkl", "wb") as model_file:
         pickle.dump(model, model_file)
@@ -140,6 +140,7 @@ if uploaded_file:
         "dataframe": df,
         "feature_columns": feature_column_names,
         "target_columns": target_column_names,
+        "model_name": model_name,
         "overwrite_model": overwrite
     }
     st.button(label="Train the model", on_click=find_formula, kwargs=kwargs)

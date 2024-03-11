@@ -64,7 +64,7 @@ def test_several_target_columns(dummy_data):
     """
     features = "Temperature"
     targets = "Price;Sales"
-    train.find_formula(dummy_data, features, targets)
+    train.find_formula(dummy_data, features, targets, model_name="test_model", overwrite_model=True)
 
 
 def test_column_names_splitting(dummy_data):
@@ -76,7 +76,7 @@ def test_column_names_splitting(dummy_data):
     """
     features = "Temperature; Price" # Notice the extra white space
     targets = "Sales" 
-    train.find_formula(dummy_data, features, targets)
+    train.find_formula(dummy_data, features, targets, model_name="test_model", overwrite_model=True)
 
 
 def test_nan_handling(dummy_data_with_nan):
@@ -87,7 +87,7 @@ def test_nan_handling(dummy_data_with_nan):
     """
     features = "Temperature;Price"
     targets = "Sales"
-    train.find_formula(dummy_data_with_nan, features, targets)
+    train.find_formula(dummy_data_with_nan, features, targets, model_name="test_model", overwrite_model=True)
 
 def test_invalid_column_name_handling(dummy_data):
     """
@@ -97,4 +97,4 @@ def test_invalid_column_name_handling(dummy_data):
     """
     features = "Temperature;Date"
     targets = "Sales"
-    train.find_formula(dummy_data, features, targets)
+    train.find_formula(dummy_data, features, targets, model_name="test_model", overwrite_model=True)
