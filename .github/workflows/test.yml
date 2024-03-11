@@ -15,7 +15,7 @@ jobs:
     strategy:
       matrix:
         # Run in all these versions of Python
-        python-version: [3.9, 3.10, 3.11]
+        python-version: [3.9.0, 3.10.0, 3.11.0]
     steps:
         # Setup which version of Python to use
       - name: Checkout repository files
