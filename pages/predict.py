@@ -1,6 +1,8 @@
 import pickle
 
 import streamlit as st
+import mlflow
+from mlflow import MlflowClient
 import pandas as pd
 from sblearn.models import SymbolicRegressor
 
@@ -19,14 +21,15 @@ def predict(dataframe: pd.DataFrame, feature_columns: str, model_name: str):
     Uses the trained model identified by 'model_name' to perform predictions
     on the data stored in the columns 'feature_columns'.
     """
-    try:
-        with open(f"models/{model_name}.pkl", "rb") as model_file:
-            model = pickle.load(model_file)
-    
-    except FileNotFoundError:
-        msg_error = f"No model named '{model_name}' was found."
-        st.error(msg_error)
-        return False
+
+    client = MlflowClient()
+    model_versions = client.search_model_versions(f"name='{model_name}'")
+    last_version = model_versions[0].version
+    model_uri = client.get_model_version_download_uri(name=model_name, version=last_version)
+    # Reconstituting the model local path
+    splitted_uri = model_uri.split("/")[1:]
+    model_uri = "mlartifacts/" + "/".join(splitted_uri)
+    model = mlflow.pyfunc.load_model(model_uri)
 
     X = prepare_data(dataframe, feature_columns)
     if type(X) != bool:

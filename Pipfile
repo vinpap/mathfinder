@@ -11,6 +11,7 @@ selenium = "*"
 pytest = "*"
 beautifulsoup4 = "*"
 requests = "*"
+mlflow = "*"
 
 [dev-packages]
 
