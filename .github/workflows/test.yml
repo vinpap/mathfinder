@@ -37,4 +37,6 @@ jobs:
           pipenv install
         # Run the tests
       - name: Run tests
-        run: pipenv run python -m pytest test.py
+        run: |
+          pipenv run mlflow server --host 127.0.0.1 --port 8080
+          pipenv run python -m pytest test.py

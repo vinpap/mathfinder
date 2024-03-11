@@ -3,8 +3,11 @@ Unit tests written before fixing the bugs reported by issues #1, 2, 3, 4
 """
 import pytest
 import pandas as pd
+import mlflow
 
 from pages import train
+
+mlflow.set_tracking_uri(uri="http://127.0.0.1:8080")
 
 @pytest.fixture
 def dummy_data():
@@ -13,19 +16,34 @@ def dummy_data():
             12,
             15,
             3,
-            7
+            7,
+            9,
+            7,
+            1,
+            2,
+            8
         ],
         "Sales": [
             10000,
             5647,
             124,
-            666
+            666,
+            9,
+            7,
+            1,
+            2,
+            4
         ],
         "Temperature": [
             12.3,
             4,
             6.3,
-            5
+            5,
+            9,
+            7,
+            1,
+            2,
+            0
         ]
     }
     return pd.DataFrame(dummy_dict)
@@ -37,19 +55,31 @@ def dummy_data_with_nan():
             12,
             15,
             3,
-            7
+            7,
+            9,
+            7,
+            1,
+            2
         ],
         "Sales": [
             10000,
             5647,
             pd.NA,
-            pd.NA
+            pd.NA,
+            9,
+            7,
+            1,
+            2
         ],
         "Temperature": [
             12.3,
             4,
             6.3,
-            5
+            5,
+            9,
+            7,
+            1,
+            2
         ]
     }
     return pd.DataFrame(dummy_dict)
@@ -64,7 +94,7 @@ def test_several_target_columns(dummy_data):
     """
     features = "Temperature"
     targets = "Price;Sales"
-    train.find_formula(dummy_data, features, targets, model_name="test_model", overwrite_model=True)
+    train.find_formula(dummy_data, features, targets, model_name="test_several_target_columns_model")
 
 
 def test_column_names_splitting(dummy_data):
@@ -76,7 +106,7 @@ def test_column_names_splitting(dummy_data):
     """
     features = "Temperature; Price" # Notice the extra white space
     targets = "Sales" 
-    train.find_formula(dummy_data, features, targets, model_name="test_model", overwrite_model=True)
+    train.find_formula(dummy_data, features, targets, model_name="test_column_names_splitting_model")
 
 
 def test_nan_handling(dummy_data_with_nan):
@@ -87,7 +117,7 @@ def test_nan_handling(dummy_data_with_nan):
     """
     features = "Temperature;Price"
     targets = "Sales"
-    train.find_formula(dummy_data_with_nan, features, targets, model_name="test_model", overwrite_model=True)
+    train.find_formula(dummy_data_with_nan, features, targets, model_name="test_nan_handling_model")
 
 def test_invalid_column_name_handling(dummy_data):
     """
@@ -97,4 +127,4 @@ def test_invalid_column_name_handling(dummy_data):
     """
     features = "Temperature;Date"
     targets = "Sales"
-    train.find_formula(dummy_data, features, targets, model_name="test_model", overwrite_model=True)
+    train.find_formula(dummy_data, features, targets, model_name="test_invalid_column_name_handling_model")
