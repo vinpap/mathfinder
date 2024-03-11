@@ -27,7 +27,7 @@ def find_formula(dataframe: pd.DataFrame, feature_columns: str, target_columns: 
 
     X, y = prepare_data(dataframe, feature_columns, target_columns)
     if type(X) != bool:
-        train_model(X, y)
+        train_model(X, y, model_name)
     
 
 def prepare_data(dataframe: pd.DataFrame, feature_columns: str, target_columns: str):
@@ -65,7 +65,7 @@ def convert_str_to_latex(formula: str) -> str:
     return latex_formula
   
 
-def train_model(X, y):
+def train_model(X, y, model_name):
     """
     Trains the model with the data provided by the user.
     """
