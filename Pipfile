@@ -12,6 +12,7 @@ pytest = "*"
 beautifulsoup4 = "*"
 requests = "*"
 mlflow = "*"
+mysql-connector-python = "*"
 
 [dev-packages]
 
