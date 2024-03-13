@@ -64,7 +64,7 @@ def display_formula(model: SymbolicRegressor, X: pd.DataFrame, y):
         c.latex(latex_formula)
     st.info("In order to ensure the best performance for your model, please upload testing data. More info on the homepage.")
 
-def update_mlflow(model: SymbolicRegressor, model_name: str, X_test, y_test, X_train):
+def update_mlflow(model: SymbolicRegressor, model_name: str, X_test, y_test, X_train, y_train):
     """
     Updates MLFlow with the newly-trained model.
     """
@@ -75,7 +75,7 @@ def update_mlflow(model: SymbolicRegressor, model_name: str, X_test, y_test, X_t
         mae = mean_absolute_error(y_test, y_pred)
         mlflow.log_params(params)
         mlflow.log_metric("mean absolute error", mae)
-        signature = infer_signature(X_train, model.predict(X_train))
+        signature = infer_signature(X_train, y_train)
         model_info = mlflow.sklearn.log_model(
             sk_model=model,
             artifact_path=model_name,
@@ -103,8 +103,14 @@ def find_formula(dataframe: pd.DataFrame, feature_columns: str, target_columns: 
         display_formula(model, X, y)
 
         test_every_nth_day = testing_frequency * 7 # Need to convert weeks into days
-        update_mlflow(model, model_name, X_test, y_test, X_train)
+        update_mlflow(model, model_name, X_test, y_test, X_train, y_train)
         update_db(model_name, email, test_every_nth_day)
+
+        # Creating an empty folder in the 'autotest' directory where the 
+        # user can put their testing data (if that subfolder does not
+        # already exists)
+        if not os.path.exists(os.path.join("./autotest", model_name)):
+            os.mkdir(os.path.join("./autotest", model_name))
 
 
 def update_db(model_name: str, email: str, test_every_nth_day: int):
@@ -195,7 +201,6 @@ def train_model(X, y, model_name):
 
 # Setting up the model and MLFlow
 model = SymbolicRegressor()
-
 mlflow.set_tracking_uri(uri="http://127.0.0.1:8080")
 st.set_page_config(layout="wide")
 
