@@ -16,6 +16,7 @@ uploaded_file = st.file_uploader(
     label="Upload the CSV file that contains your data here"
 )
 
+
 def predict(dataframe: pd.DataFrame, feature_columns: str, model_name: str):
     """
     Uses the trained model identified by 'model_name' to perform predictions
@@ -25,7 +26,9 @@ def predict(dataframe: pd.DataFrame, feature_columns: str, model_name: str):
     client = MlflowClient()
     model_versions = client.search_model_versions(f"name='{model_name}'")
     last_version = model_versions[0].version
-    model_uri = client.get_model_version_download_uri(name=model_name, version=last_version)
+    model_uri = client.get_model_version_download_uri(
+        name=model_name, version=last_version
+    )
     # Reconstituting the model local path
     splitted_uri = model_uri.split("/")[1:]
     model_uri = "mlartifacts/" + "/".join(splitted_uri)
@@ -33,18 +36,17 @@ def predict(dataframe: pd.DataFrame, feature_columns: str, model_name: str):
 
     X = prepare_data(dataframe, feature_columns)
     if type(X) != bool:
-        with st.spinner("The model is predicting values based on the data you uploaded. This might take a few seconds, please do not close this page."):
+        with st.spinner(
+            "The model is predicting values based on the data you uploaded. This might take a few seconds, please do not close this page."
+        ):
             y_pred = model.predict(X)
 
         dataframe["predictions"] = y_pred
-        csv = dataframe.to_csv(index=False).encode('utf-8')
+        csv = dataframe.to_csv(index=False).encode("utf-8")
         st.info(f"Predictions complete! You can download the data in CSV format below:")
-        st.download_button("Download CSV",
-                           csv,
-                           "predictions.csv",
-                           "text/csv",
-                           key='download-csv'
-                           )
+        st.download_button(
+            "Download CSV", csv, "predictions.csv", "text/csv", key="download-csv"
+        )
 
 
 def prepare_data(dataframe: pd.DataFrame, feature_columns: str):
@@ -55,7 +57,6 @@ def prepare_data(dataframe: pd.DataFrame, feature_columns: str):
     for i in range(len(f_headers)):
         f_headers[i] = f_headers[i].strip()
 
-    
     try:
         X = dataframe[f_headers]
     except KeyError:
@@ -64,7 +65,6 @@ def prepare_data(dataframe: pd.DataFrame, feature_columns: str):
         return False, False
 
     return X
-    
 
 
 if uploaded_file:
@@ -77,12 +77,10 @@ if uploaded_file:
     feature_column_names = st.text_input(
         label="Enter the names of the columns you want to use to make predictions"
     )
-    model_name = st.text_input(
-        label="Enter the name of the model you want to use"
-    )
+    model_name = st.text_input(label="Enter the name of the model you want to use")
     kwargs = {
         "dataframe": df,
         "feature_columns": feature_column_names,
-        "model_name": model_name
+        "model_name": model_name,
     }
     st.button(label="Make predictions", on_click=predict, kwargs=kwargs)

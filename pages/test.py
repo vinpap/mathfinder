@@ -19,6 +19,7 @@ def get_original_metrics(model_name: str) -> float:
     first_run = runs[0].data.to_dictionary()
     return first_run["metrics"]["mean absolute error"]
 
+
 def update_testing_date(model_name: str):
     """
     Update the last testing date in the database.
@@ -27,7 +28,7 @@ def update_testing_date(model_name: str):
         host="localhost",
         user=os.environ["MYSQL_USER"],
         password=os.environ["MYSQL_PWD"],
-        database="mathfinder"
+        database="mathfinder",
     ) as db:
         with db.cursor() as c:
             today = date.today()
@@ -35,7 +36,10 @@ def update_testing_date(model_name: str):
             c.execute(query)
             db.commit()
 
-def test(dataframe: pd.DataFrame, feature_columns: list, target_column: str, model_name: str):
+
+def test(
+    dataframe: pd.DataFrame, feature_columns: list, target_column: str, model_name: str
+):
     """
     Computes the MAE for the model identified by 'model_name' using the testing data provided.
     """
@@ -43,7 +47,9 @@ def test(dataframe: pd.DataFrame, feature_columns: list, target_column: str, mod
     client = MlflowClient()
     model_versions = client.search_model_versions(f"name='{model_name}'")
     last_version = model_versions[0].version
-    model_uri = client.get_model_version_download_uri(name=model_name, version=last_version)
+    model_uri = client.get_model_version_download_uri(
+        name=model_name, version=last_version
+    )
     # Reconstituting the model local path
     splitted_uri = model_uri.split("/")[1:]
     model_uri = "mlartifacts/" + "/".join(splitted_uri)
@@ -51,7 +57,9 @@ def test(dataframe: pd.DataFrame, feature_columns: list, target_column: str, mod
 
     X_test, y_test = prepare_data(dataframe, feature_columns, target_column)
     if type(X_test) != bool:
-        with st.spinner("The model is predicting values based on the data you uploaded. This might take a few seconds, please do not close this page."):
+        with st.spinner(
+            "The model is predicting values based on the data you uploaded. This might take a few seconds, please do not close this page."
+        ):
             y_pred = model.predict(X_test)
             mae = mean_absolute_error(y_test, y_pred)
             original_mae = get_original_metrics(model_name)
@@ -65,7 +73,6 @@ def test(dataframe: pd.DataFrame, feature_columns: list, target_column: str, mod
         update_testing_date(model_name)
 
 
-
 def prepare_data(dataframe: pd.DataFrame, feature_columns: list, target_columns: list):
     """
     Retrieves the data in the columns required by the user.
@@ -77,7 +84,7 @@ def prepare_data(dataframe: pd.DataFrame, feature_columns: list, target_columns:
     t_headers = target_columns.split(";")
     for i in range(len(t_headers)):
         t_headers[i] = t_headers[i].strip()
-    
+
     try:
         X = dataframe[f_headers]
         y = dataframe[t_headers]
@@ -86,8 +93,9 @@ def prepare_data(dataframe: pd.DataFrame, feature_columns: list, target_columns:
         st.error(msg_error)
         return False, False
 
-    return X, y 
-    
+    return X, y
+
+
 st.set_page_config(layout="wide")
 
 left_co, cent_co, last_co = st.columns(3)
@@ -111,14 +119,12 @@ if uploaded_file:
     target_column_name = st.text_input(
         label="Enter the name of the column where the target variable is stored"
     )
-    model_name = st.text_input(
-        label="Enter the name of the model you want to use"
-    )
+    model_name = st.text_input(label="Enter the name of the model you want to use")
 
     kwargs = {
         "dataframe": df,
         "feature_columns": feature_column_names,
         "model_name": model_name,
-        "target_column": target_column_name
+        "target_column": target_column_name,
     }
     st.button(label="Test the model", on_click=test, kwargs=kwargs)

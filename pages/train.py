@@ -17,16 +17,19 @@ def format_testing_frequency_display(option: str):
     Modifies the display of the labels on the testing frequency dropdown menu.
     """
     match option:
-        case 1: 
+        case 1:
             return "1 week"
         case 4:
             return "4 weeks"
-        case 12: 
+        case 12:
             return "12 weeks"
         case 24:
             return "24 weeks"
-        
-    raise NotImplemented("The testing frequency given to the formatting function is not part of the predefined list.")
+
+    raise NotImplemented(
+        "The testing frequency given to the formatting function is not part of the predefined list."
+    )
+
 
 def model_exists(model_name: str) -> bool:
     """
@@ -55,16 +58,21 @@ def display_formula(model: SymbolicRegressor, X: pd.DataFrame, y):
         column_values_mapping[f"y{i}"] = f"\\textsf{{{column}}}"
         i += 1
 
-    st.info("Your model has been trained! It has found the formula below:")      
+    st.info("Your model has been trained! It has found the formula below:")
     c = st.container()
     for formula in model.formulas:
         for m in column_values_mapping:
             formula = formula.replace(m, column_values_mapping[m])
         latex_formula = convert_str_to_latex(formula)
         c.latex(latex_formula)
-    st.info("In order to ensure the best performance for your model, please upload testing data. More info on the homepage.")
+    st.info(
+        "In order to ensure the best performance for your model, please upload testing data. More info on the homepage."
+    )
 
-def update_mlflow(model: SymbolicRegressor, model_name: str, X_test, y_test, X_train, y_train):
+
+def update_mlflow(
+    model: SymbolicRegressor, model_name: str, X_test, y_test, X_train, y_train
+):
     """
     Updates MLFlow with the newly-trained model.
     """
@@ -85,28 +93,39 @@ def update_mlflow(model: SymbolicRegressor, model_name: str, X_test, y_test, X_t
         )
 
 
-def find_formula(dataframe: pd.DataFrame, feature_columns: str, target_columns: str, model_name: str, email: str, testing_frequency: int, overwrite: bool):
+def find_formula(
+    dataframe: pd.DataFrame,
+    feature_columns: str,
+    target_columns: str,
+    model_name: str,
+    email: str,
+    testing_frequency: int,
+    overwrite: bool,
+):
     """
     Uses the model to find the formula that best fits the data.
     """
     if not overwrite and model_exists(model_name):
-        st.error(f"The model {model_name} already exists. Check the box 'Overwrite model' if you want to retrain it.")
+        st.error(
+            f"The model {model_name} already exists. Check the box 'Overwrite model' if you want to retrain it."
+        )
         return
 
-
     X, y = prepare_data(dataframe, feature_columns, target_columns)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
     if type(X) != bool:
         model = train_model(X, y, model_name)
         if not model:
             raise ValueError("An unknown error occured while training the model.")
         display_formula(model, X, y)
 
-        test_every_nth_day = testing_frequency * 7 # Need to convert weeks into days
+        test_every_nth_day = testing_frequency * 7  # Need to convert weeks into days
         update_mlflow(model, model_name, X_test, y_test, X_train, y_train)
         update_db(model_name, email, test_every_nth_day)
 
-        # Creating an empty folder in the 'autotest' directory where the 
+        # Creating an empty folder in the 'autotest' directory where the
         # user can put their testing data (if that subfolder does not
         # already exists)
         if not os.path.exists(os.path.join("./autotest", model_name)):
@@ -124,7 +143,7 @@ def update_db(model_name: str, email: str, test_every_nth_day: int):
         host="localhost",
         user=os.environ["MYSQL_USER"],
         password=os.environ["MYSQL_PWD"],
-        database="mathfinder"
+        database="mathfinder",
     ) as db:
         with db.cursor() as c:
             today = date.today()
@@ -132,7 +151,7 @@ def update_db(model_name: str, email: str, test_every_nth_day: int):
                 ON DUPLICATE KEY UPDATE email="{email}",  test_every_nth_day={test_every_nth_day}, last_testing_date="{today.strftime('%Y-%m-%d')}" """
             c.execute(query)
             db.commit()
-    
+
 
 def prepare_data(dataframe: pd.DataFrame, feature_columns: str, target_columns: str):
     """
@@ -145,7 +164,7 @@ def prepare_data(dataframe: pd.DataFrame, feature_columns: str, target_columns: 
     t_headers = target_columns.split(";")
     for i in range(len(t_headers)):
         t_headers[i] = t_headers[i].strip()
-    
+
     try:
         X = dataframe[f_headers]
         y = dataframe[t_headers]
@@ -154,20 +173,21 @@ def prepare_data(dataframe: pd.DataFrame, feature_columns: str, target_columns: 
         st.error(msg_error)
         return False, False
 
-    return X, y 
+    return X, y
+
 
 def convert_str_to_latex(formula: str) -> str:
     """
     Converts the formula string into its latex equivalent so it can be displayed.
     """
-    characters_to_remove = ("$_")
+    characters_to_remove = "$_"
     latex_formula = formula.replace("*", " \\times ")
     latex_formula = latex_formula.replace("/", " \\div ")
     for c in characters_to_remove:
         latex_formula = latex_formula.replace(c, " ")
-    
+
     return latex_formula
-  
+
 
 def train_model(X, y, model_name):
     """
@@ -176,7 +196,9 @@ def train_model(X, y, model_name):
 
     left_co, cent_co, last_co = st.columns(3)
     with cent_co:
-        with st.spinner("The model is looking for the math formula that best describes your data. This might take a few minutes, do not close this page"):  
+        with st.spinner(
+            "The model is looking for the math formula that best describes your data. This might take a few minutes, do not close this page"
+        ):
             try:
                 model.fit(X, y)
                 st.balloons()
@@ -189,13 +211,13 @@ def train_model(X, y, model_name):
                     msg_error = "An unknown error occured while processing your data."
                 st.error(msg_error)
                 return False
-            
+
             except TypeError:
                 # Issues with nan values
                 msg_error = "Your dataset contains some data that cannot be processed. Please ensure it contains only numerical values and make sure no value is missing."
                 st.error(msg_error)
                 return False
-        
+
         return model
 
 
@@ -225,21 +247,15 @@ if uploaded_file:
     feature_column_names = st.text_input(
         label="Enter the names of the features columns, separated by semi-columns (;)"
     )
-    target_column_names = st.text_input(
-        label="Enter the name of the target column"
-    )
-    model_name = st.text_input(
-        label="Enter the name you want to give to your model"
-    )
-    email = st.text_input(
-        label="Enter your email address"
-    )
+    target_column_names = st.text_input(label="Enter the name of the target column")
+    model_name = st.text_input(label="Enter the name you want to give to your model")
+    email = st.text_input(label="Enter your email address")
     testing_frequency = st.selectbox(
         "How often do you want your model to be tested? You will need to feed enough testing data to your model for every test",
         (1, 4, 12, 24),
-        format_func=format_testing_frequency_display
+        format_func=format_testing_frequency_display,
     )
-    overwrite = st.checkbox('Overwrite model')
+    overwrite = st.checkbox("Overwrite model")
     kwargs = {
         "dataframe": df,
         "feature_columns": feature_column_names,
@@ -247,7 +263,6 @@ if uploaded_file:
         "model_name": model_name,
         "email": email,
         "testing_frequency": testing_frequency,
-        "overwrite": overwrite
+        "overwrite": overwrite,
     }
     st.button(label="Train the model", on_click=find_formula, kwargs=kwargs)
-
