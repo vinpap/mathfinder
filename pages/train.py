@@ -118,7 +118,8 @@ def find_formula(
     if type(X) != bool:
         model = train_model(X, y, model_name)
         if not model:
-            raise ValueError("An unknown error occured while training the model.")
+            st.error("An error occured while training the model.")
+            return
         display_formula(model, X, y)
 
         test_every_nth_day = testing_frequency * 7  # Need to convert weeks into days
@@ -143,7 +144,7 @@ def update_db(model_name: str, email: str, test_every_nth_day: int):
         host="localhost",
         user=os.environ["MYSQL_USER"],
         password=os.environ["MYSQL_PWD"],
-        database="mathfinder",
+        database=os.environ["MYSQL_DB_NAME"],
     ) as db:
         with db.cursor() as c:
             today = date.today()
@@ -205,10 +206,11 @@ def train_model(X, y, model_name):
 
             except ValueError:
                 # Is there more than one target?
-                if len(y.shape) != 1:
+                print(y.shape)
+                if len(y.shape) != 1 and y.shape[1] != 1 :
                     msg_error = "Mathfinder can only work with one target value at a time. Please spcecify only one target column."
                 else:
-                    msg_error = "An unknown error occured while processing your data."
+                    msg_error = "Your dataset contains some data that cannot be processed. Please ensure it contains only numerical values and make sure no value is missing."
                 st.error(msg_error)
                 return False
 
