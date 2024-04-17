@@ -129,6 +129,8 @@ def find_formula(
         # Creating an empty folder in the 'autotest' directory where the
         # user can put their testing data (if that subfolder does not
         # already exists)
+        if not os.path.exists("./autotest"):
+            os.mkdir("./autotest")
         if not os.path.exists(os.path.join("./autotest", model_name)):
             os.mkdir(os.path.join("./autotest", model_name))
 

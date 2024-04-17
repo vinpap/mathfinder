@@ -8,7 +8,8 @@ the first version of the model.
 """
 import os
 import json
-from datetime import date
+import logging
+from datetime import date, datetime
 import smtplib
 from email.mime.text import MIMEText
 
@@ -16,6 +17,25 @@ import mysql.connector
 import mlflow
 import pandas as pd
 from sklearn.metrics import mean_absolute_error
+
+
+
+def setup_logging():
+    """
+    Sets up everything required in order to log enable logging in a .log file.
+
+    Logs are located in the 'logs' subfolder.
+    """
+    if not (os.path.exists("./logs") and os.path.isdir("./logs")):
+        os.mkdir("./logs")
+
+    # Setting up logging
+    now = datetime.now()
+    filename = now.strftime("%Y_%m_%d_%H_%M_%S.log")
+    logging.basicConfig(filename=os.path.join("./logs", filename), level=logging.INFO, format='%(asctime)s - %(levelname)s : %(message)s')
+    
+
+    
 
 def testing_is_necessary(last_testing_date, test_frequency: int) -> bool:
     """
@@ -33,6 +53,8 @@ def update_testing_date(model_name: str):
     """
     Update the last testing date in the database.
     """
+
+    logging.debug(f"Updated last training date for model {model_name}")
     with mysql.connector.connect(
         host="localhost",
         user=os.environ["MYSQL_USER"],
@@ -131,6 +153,7 @@ def give_report(title: str, report: str, email: str):
     print(f"Report given to {email}:")
     print(report)
 
+    #TODO: enlever 'smtp.gmail.com' du code, utiliser la variable d'environnement à la place
     # Some environment variables need to be set, depending on the SMTP server you use
     subject = title
     body = report
@@ -149,60 +172,75 @@ def give_report(title: str, report: str, email: str):
     print("Message sent!")
 
 
+if __name__ == "__main__":
 
+    setup_logging()
+    logging.info("Starting the monitoring script")
 
-mlflow.set_tracking_uri(uri="http://127.0.0.1:8080")
+    mlflow.set_tracking_uri(uri="http://127.0.0.1:8080")
 
-with mysql.connector.connect(
-    host="localhost",
-    user=os.environ["MYSQL_USER"],
-    password=os.environ["MYSQL_PWD"],
-    database="mathfinder"
-) as db:
-    with db.cursor() as c:
+    
+    with mysql.connector.connect(
+        host="localhost",
+        user=os.environ["MYSQL_USER"],
+        password=os.environ["MYSQL_PWD"],
+        database="mathfinder"
+    ) as db:
         
-        query = """SELECT * FROM Models;"""
-        c.execute(query)
-        models = c.fetchall()
-
-        for model in models:
-            model_name = model[0]
-            email = model[1]
-            if testing_is_necessary(last_testing_date=model[3], test_frequency=model[2]):
-                report = "" # Stores the report that will be conveyed to the user
-                test_data = get_test_data(model_name)
-                if not test_data:
-                    title = "Mathfinder did not find your test data"
-                    report = f"""Mathfinder tried to test your model {model_name} to ensure it still retains good performance, but no testing data was found. Please ensure that:\n- there is at least one CSV file that contains test data in the 'autotest/<your model name> folder, in Mathfinder's directory\n- this CSV file contains one column for each input data used in your model, and one for each target value. The column names must be the same as those of the data used to train the model."""
-                else:
-                    model = load_model(model_name)
-                    X_test = test_data[0]
-                    y_test = test_data[1]
-                    filename = test_data[2]
-                    y_pred = model.predict(X_test)
-                    mae = mean_absolute_error(y_test, y_pred)
-                   
-                    subdir = os.path.join("./autotest", model_name)
-                    # os.remove(os.path.join(subdir, filename))
-
-                    original_mae = get_original_metrics(model_name)
+        logging.info("Established connection with the database")
+        with db.cursor() as c:
+            
+            query = """SELECT * FROM Models;"""
+            c.execute(query)
+            models = c.fetchall()
+            logging.info("Retrieved models list")
+            for model in models:
+                model_name = model[0]
+                email = model[1]
+                logging.debug(f"Processing model {model_name}")
+                if testing_is_necessary(last_testing_date=model[3], test_frequency=model[2]):
                     
-                    if mae < 1.05 * original_mae:
-                        title = "Your model passed the test"
-                        report = f"""Congratulations, your model {model_name} is doing well!\nMathfinder tested your model automatically using the testing data your provided, and its performance is still good."""
-                            
+                    report = "" # Stores the report that will be conveyed to the user
+                    test_data = get_test_data(model_name)
+                    if not test_data:
+                        logging.info(f"Model {model_name} should be tested but test data could not be loaded. This means they are either missing or do not follow the right formatting.")
+                        title = "Mathfinder did not find your test data"
+                        report = f"""Mathfinder tried to test your model {model_name} to ensure it still retains good performance, but no testing data was found. Please ensure that:\n- there is at least one CSV file that contains test data in the 'autotest/<your model name> folder, in Mathfinder's directory\n- this CSV file contains one column for each input data used in your model, and one for each target value. The column names must be the same as those of the data used to train the model."""
                     else:
-                        title = "Your model failed the test"
-                        report = f"""Your model {model_name} needs to be retrained!\nMathfinder tested your model automatically using the testing data your provided, and its performance metrics went down. Please retrain your model using recent data whenever you have the chance."""
-                            
-                    report += "\n"
-                    report += f"Original mean absolute error (MAE): {original_mae}\n"
-                    report += f"MAE with the latest test: {mae}\n"
-                    report += "Acceptability threshold: 105% of the original MAE"
-                
-                give_report(title, report, email)
-                update_testing_date(model_name)
-                
-        
+                        logging.debug(f"Test data loaded for model {model_name}")
+                        model = load_model(model_name)
+                        X_test = test_data[0]
+                        y_test = test_data[1]
+                        filename = test_data[2]
+                        y_pred = model.predict(X_test)
+                        mae = mean_absolute_error(y_test, y_pred)
+                    
+                        subdir = os.path.join("./autotest", model_name)
+                        os.remove(os.path.join(subdir, filename))
+
+                        original_mae = get_original_metrics(model_name)
+
+                        
+                        
+                        if mae < 1.05 * original_mae:
+                            logging.info(f"MAE computed for model {model_name}: {mae}. Original MAE: {original_mae}. Performance metrics are still acceptable")
+                            title = "Your model passed the test"
+                            report = f"""Congratulations, your model {model_name} is doing well!\nMathfinder tested your model automatically using the testing data your provided, and its performance is still good."""
+                                
+                        else:
+                            logging.info(f"MAE computed for model {model_name}: {mae}. Original MAE: {original_mae}. Error metrics are above the acceptability threshold, the model must be retrained")
+                            title = "Your model failed the test"
+                            report = f"""Your model {model_name} needs to be retrained!\nMathfinder tested your model automatically using the testing data your provided, and its performance metrics went down. Please retrain your model using recent data whenever you have the chance."""
+                                
+                        report += "\n"
+                        report += f"Original mean absolute error (MAE): {original_mae}\n"
+                        report += f"MAE with the latest test: {mae}\n"
+                        report += "Acceptability threshold: 105% of the original MAE"
+                    
+                    logging.info(f"Sending report to the email address registered for model {model_name}")
+                    give_report(title, report, email)
+                    update_testing_date(model_name)
+                    
+            
 
 

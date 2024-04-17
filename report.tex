@@ -50,69 +50,23 @@
         \centering
     \end{figure}
 
-    Le directeur d'une grande université nous contacte. Les chercheurs de cette université ont récemment déployé Mathfinder sur leurs serveurs, mais ils rencontrent des bugs. Insatisfait de notre outil, le directeur exige que nous corrigions ces bugs et nous envoie un descriptif de tous les problèmes rencontrés :
+    Le directeur d'une grande université nous contacte. Les chercheurs de cette université ont récemment déployé Mathfinder sur leurs serveurs, mais plusieurs d'entre eux ont rencontré un problème étrange : la précision de leurs modèles d'IA se dégrade avec le temps ! Perplexe, le directeur se tourne vers nous pour que nous réglions ce problème. Par ailleurs, plusieurs bugs ont été rencontrés par les utilisateurs. Il exige que nous corrigions ces bugs et nous envoie un descriptif de tous les problèmes rencontrés :
     \begin{itemize}
         \item L'application crash quand on essaie de lui faire prédire les valeurs de deux colonnes ou plus
         \item L'application crash si on ne sépare pas le nom de chaque colonne avec des points-virgules sans espace avant ou après
         \item L'application crash s'il manque des valeurs dans certaines colonnes dans le fichier CSV fourni.
     \end{itemize}
-    Par ailleurs, plusieurs chercheurs de son établissement ont rencontré un problème étrange : la précision de leurs modèles d'IA se dégrade avec le temps ! Perplexe, le directeur se tourne vers nous pour que nous réglions ce problème.
-
+    
     Ce dossier comporte deux volets :
     \begin{itemize}
-        \item Le débugging des problèmes rencontrés, de la reproduction du bug à sa résolution
-        \item La mise en place de mécanismes de surveillance des modèles et d'alerte.
+        \item La mise en place de mécanismes de surveillance des modèles et d'alerte
+        \item Le débugging des problèmes rencontrés, de la reproduction du bug à sa résolution.
     \end{itemize}
     Le code associé à ce projet est disponible \href{https://github.com/vinpap/mathfinder}{sur GitHub}.
 
-    \section{Traitement des problèmes techniques}
-    \subsection{Méthodologie de debugging}
-    La résolution des bugs est divisée en plusieurs étapes :
-    \begin{itemize}
-        \item Reproduction du bug
-        \item Écriture d'un test unitaire qui reproduit le bug
-        \item Recherche de la source du problème
-        \item Correction du bug
-    \end{itemize}
-    \textbf{GitHub} est un outil crucial durant ce processus. Deux fonctionnalités de la plateforme sont notamment exploitées ici :
-    \begin{itemize}
-        \item Les tickets GitHub nous permettent de documenter le debugging en enregistrant une trace des actions prises pour corriger chaque bug
-        \item Afin de ne pas compromettre le fonctionnement de l'application, le debugging de chaque problème est réalisé sur une branche qui lui est propre. Lorsque le problème est réglé, cete branche est fusionnée à la branche principale de l'application à l'aide d'une pull request.
-    \end{itemize}
-    \subsection{Résolution des problèmes}
-    \textbf{Problème 1 : L'application crash quand on essaie de lui faire prédire les valeurs de deux colonnes ou plus (\href{https://github.com/vinpap/mathfinder/issues/2}{lien vers le ticket})}
-
-    Si un utilisateur tente d'entraîner son modèle en spécifiant plus de deux valeurs cibles, l'application crash avec une exception ValueError. Un utilisateur mentionne avoir reçu le message \textit{"y should be a 1d array, got an array of shape (200, 2) instead"}.
-
-    Ce problème est lié à une limitation du modèle de régression utilisé par Mathfinder : il ne peut générer qu'une seule valeur cible. Cette contrainte n'apparaît nul part sur l'interface cependant, et l'application permet malgré tout à l'utilisateur d'entrer plusieurs noms de colonne dans le formulaire. Deux mesures ont été mises en place pour régler ce bug :
-    \begin{itemize}
-        \item Le code Python a été modifié pour détecter l'apparition d'une exception ValueError. Si le format des données en entrée du modèle contient plus d'une dimension, on afiche alors un message d'erreur pour demander à l'utilisateur de n'entrer qu'un seul nom de colonne.
-        \item Le texte de l'interface a été mis à jour pour demander à l'utilisateur d'entrer UN nom de colonne.
-    \end{itemize}
-
-    \textbf{Problème 2 : L'application crash si on laisse des espaces avant ou après les points-virgules qui séparent les noms des colonnes (\href{https://github.com/vinpap/mathfinder/issues/3}{lien vers le ticket})}
-
-    L'application demande aux utilisateurs d'entrer le nom des colonnes à utiliser pour les calculs, en les séparant par des points-virgules. Cependant, certains utilisateurs reçoivent le message d'erreur suivant : \textit{"KeyError: <nom de la colonne> not in index"}. Ils ont observé que cela arrive uniquement lorsqu'il y a des espaces entre les points-virgules et les noms de colonne adjacents.
-
-    Ce problème apparaît à cause de la façon dont la séparation des noms de colonnes est réalisée. En effet, si on laisse des espaces avant ou après un point-virgule, celui-ci est rattaché au nom de colonne adjacent, qui ne correspond alors plus au nom de colonne dans les données, qui lui ne contient pas cet espace supplémentaire. La solution utilisée pour régler ce problème est de supprimer tous les espaces avant et après les noms de colonne après la séparation. 
-
-    \textbf{Problème 3 : L'application crash s'il manque des valeurs dans les données (\href{https://github.com/vinpap/mathfinder/issues/4}{lien vers le ticket})}
-
-    Lorsqu'il manque des valeurs dans les données entrées par l'utilisateur, l'application affiche une exception Python ValueError accompagnée du message \textit{"Input X contains NaN"}.
-
-    Comme le laisse entendre ce message, notre modèle d'IA ne peut pas traiter des données incomplètes. Deux options ont été envisagées :
-    \begin{itemize}
-        \item Supprimer automatiquement toutes les lignes des données auxquelles il manque des valeurs
-        \item Refuser les données de l'utilisateur en affichant un message d'erreur pour l'informer que ses données sont incomplètes.
-    \end{itemize}
-    C'est finalement cette deuxième option qui a été retenue. En effet, le fait que les données sont incomplètes laisse penser qu'elles n'ont pas été nettoyées de façon adéquate par l'utilisateur. Ainsi il est possible que d'autres étapes du nettoyage des données (e.g. suppression des valeurs aberrantes, standardisation éventuelle des données...) n'aient pas été réalisées correctement non plus. On choisira donc d'afficher un message d'erreur lui demandant de soumettre des données propres. En Python, un simple bloc try... except nous permet de déclencher l'affichage de l'erreur lorsque l'exception ValueError est détectée.
-    \subsection{CI/CD}
-    Comme nous l'avons vu, la rédaction de tests unitaires fait partie de la résolution des bugs. Développer des tests qui reproduisent nos bugs nous permet de valider notre processus de debugging. Tant que le test ne s'exécute pas avec succès, on considère que le bug n'est pas résolu. Ici, nous allons un peu plus loin en automatisant ces tests grâce à un processus de CI/CD. À l'aide de GitHub Actions, nous définissons ainsi des règles qui déclenchent l'exécution des tests à chaque fois que du nouveau code est intégré à notre branche Git principale, la branche master. Cela nous permet de renforcer la qualité du code en réduisant les risques que l'ajout de nouveau code crée des bugs dans notre application.
-
-
 
     \section{Systèmes de surveillance des modèles}
-    Cette section répond au deuxième problème signalé par les utilisateurs de notre application : la dégradation des performances de leur modèle au fil du temps.
+    Cette section répond au premier problème signalé par les utilisateurs de notre application : la dégradation des performances de leurs modèles d'IA au fil du temps.
     \subsection{Origine du problème}
     Ce phénomène peut être expliqué par deux causes :
     \begin{itemize}
@@ -124,14 +78,36 @@
         \item \textbf{test automatique} des modèles d'IA entraînés pour voir si leurs performances se sont dégradées
         \item \textbf{alerte automatique par e-mail} en cas de dégradation des performances
         \item mise à disposition d'un tableau de bord qui permet aux gestionnaires de Mathfinder de \textbf{visualiser en détail} les performances de tous les modèles enregistrés.
-    \end{itemize} 
+    \end{itemize}
+    \subsection{Outils utilisés}
+    Les outils et plateformes suivants ont été utilisés afin de réaliser le monitorage de Mathfinder :
+    \begin{itemize}
+        \item \textbf{MySQL} est utilisé pour stocker les informations entrées par les utilisateurs lorsqu'ils entraînent un modèle (adresse e-mail et fréquence de test du modèle souhaitée). Nous choisissons d'utiliser MySQL car il est très simple à installer et mettre en place, ce qui simplifie l'installation de Mathfinder pour notre client.
+        \item Un \textbf{serveur SMTP} est nécessaire afin de pouvoir envoyer des alertes par e-mail. Dans le cadre de ce dossier nous avons utilisé le \textbf{serveur SMTP fourni par GMail}, mais notre client est libre d'utiliser le serveur qu'il souhaite lorsqu'il installe Mathfinder. La librairie Python \textbf{smtplib} nous permet quant à elle de communiquer avec le serveur SMTP.
+        \item \href{https://mlflow.org/}{MLflow}, une plateforme qui permet de gérer le cycle de développement de modèles de machine learning. Nous l'utilisons afin de permettre à notre client de pouvoir visualiser simplement les performances des modèles entraînés par les utilisateurs de son organisation sur une interface graphique
+        [PENSER À AJOUTER UN SCREENSHOT DE MLFLOW + DIRE COMMENT Y ACCÉDER DANS LA PROCÉDURE D'INSTALLATION DU MONITORING]
+    \end{itemize}
+    \subsection{Métrique de mesure des performances}
+    \label{sec:metrics}
+    Afin de pouvoir évaluer les performances des modèles d'intelligence artificielle des utilisateurs de Mathfinder, nous devons définir une métrique qui nous permet de les mesurer. Nous déciderons ici d'utiliser \textbf{l'erreur absolue moyenne} (souvent abrégée "MAE" pour \textit{Mean Absolute Error}). L'erreur absolue moyenne se définit comme la moyenne des erreurs obtenues par un modèle :
+
+    \begin{figure}[h!]
+        \begin{equation}MAE = \sum \frac{\lvert A-P \rvert}{N}  \end{equation}
+        \centering
+        \caption{Définition de la MAE. Ici $N$ représente le nombre total de prédictions réalisées, $A$ est la valeur réelle, et $P$ la valeur prédite par le modèle d'intelligence artificielle}
+        \centering
+    \end{figure}
+
+    Nous choisissons d'utiliser cette métrique car elle est facilement interprétable et ne donne pas trop d'importance aux valeurs extrêmes.
+
+    Par ailleurs, nous devons décider du seuil de performances au-delà duquel les modèles des utilisateurs doivent être réentraînés. D'ordinaire ce seuil serait fixé en fonction du type de données utilisé et des besoins spécifiques de l'utilisateur. Cependant, cela nous est impossible ici car nous ne savons pas à l'avance quel type de données est traité par le modèle \textbf{(pour rappel, c'est l'utilisateur de Mathfinder qui transmet lui-même des données numériques en format CSV à l'application. Nous ne connaissons ni la nature ni la forme prise par ces données)}. Nous choisirons donc de fixer pour tous les modèles le seuil d'erreur tolérable à \textbf{105 \% de l'erreur absolue moyenne obtenue lors du premier entraînement du modèle}.
     \subsection{Composants du système de suivi}
-    L'architecture de Mathfinder après y avoir intégré les fonctionnalités ci-dessus est représentée dans la figure 4. Elle comporte les éléments suivants :
+    L'architecture de Mathfinder après y avoir intégré le système de monitorage est représentée dans la figure 4. Elle comporte les éléments suivants :
     \begin{itemize}
         \item l'application Mathfinder. Des champs supplémentaires ont été ajoutés pour permettre à l'utilisateur de décider à quelle fréquence son modèle devrait être testé et pour récupérer son adresse e-mail en vue de lui envoyer les rapports de test
         \item un serveur MLflow (déployé sur la même machine que Mathfinder) qui stocke les modèles entraînés et permet à l'administrateur de visualiser leurs métriques
         \item une base de données MySQL, qui contient les préférences choisies par les utilisateurs lorsqu'ils entraînent un modèle (adresse e-mail, fréquence de test)
-        \item un script de monitoring. Toutes les 24 heures, il regarde dans la base de données quels modèles doivent être testés. Après avoir réalisé les tests, il compare la métrique d'erreur obtenue (l'erreur absolue moyenne) à celle qui a été obtenue après le premier entraînement du modèle. Si cette nouvelle métrique est supérieure à \textbf{105\% de l'erreur originale}, on recommande à l'utilisateur de réentraîner le modèle. Les données de test doivent être placées dans le dossier "autotest", où elles seront automatiquement utilisées. Il est aussi possible pour les utilisateurs de lancer des tests manuellement depuis l'interface de Mathfinder.
+        \item un script de monitorage. Toutes les 24 heures, il regarde dans la base de données quels modèles doivent être testés. Après avoir réalisé les tests, il calcule l'erreur absolue moyenne et la compare au \textbf{\hyperref[sec:metrics]{seuil précédemment évoqué}}. Si le seuil a été dépassé, on recommande à l'utilisateur de réentraîner le modèle. Les données de test doivent être placées dans le dossier "autotest", où elles seront automatiquement utilisées. Il est aussi possible pour les utilisateurs de lancer des tests manuellement depuis l'interface de Mathfinder.
         \item un serveur e-mail pour envoyer les rapports de test aux utilisateurs. Le serveur SMTP de GMail a été utilisé dans le cadre de ce dossier, mais il est aussi possible d'en utiliser un autre, ou de créer son propre serveur.
     \end{itemize}
     \begin{figure}[h!]
@@ -140,6 +116,15 @@
         \caption{Architecture de Mathfinder après avoir intégré un système de monitoring des modèles. Les flèches indiquent une relation d'usage (l'entité à l'origine de la flèche "utilise" celle vers laquelle la flèche se dirige)}
         \centering
     \end{figure}
+
+    \subsection{Journalisation}
+    Des mécanismes de journalisation ont été mis en place afin de suivre l'exécution de Mathfinder. Cette journalisation a deux objectifs :
+    \begin{itemize}
+        \item suivre l'exécution de l'application et du script de monitorage pour détecter toute anomalie dans leur fonctionnement
+        \item donner un historique des entraînements et tests réalisés par tous les utilisateurs, ainsi que les métriques obtenues.
+    \end{itemize}
+    Les journaux sont générés à l'aide de la librairie Python \textbf{logging}, et enregistrés dans un sous-dossier "logs". Chaque fichier est nommé d'après l'heure exacte d'exécution du script, ce qui permet aux administrateurs de l'application de retrouver facilement les informations qu'ils cherchent à partir de l'heure d'exécution.
+    [INSÉRER LIEN VERS UN SCREENSHOT DE FICHIER DE LOG]
     \subsection{Mise en place}
     Voici la procédure à suivre pour installer Mathfinder sur un serveur. Nous partirons ici du principe que Python et pip sont déjà installés.
     \begin{itemize}
@@ -179,6 +164,66 @@
         \end{verbatim} 
     \end{itemize}
     Mathfinder est maintenant opérationnel sur votre serveur !
+
+
+    \section{Traitement des problèmes techniques}
+    Dans cette section, nous allons aborder la résolution des problèmes techniques signalés par notre client. Nous présenterons également les différents mécanismes et procédures mis en place pour prévenir les bugs à l'avenir et faciliter leur résolution.
+    \subsection{Méthodologie de debugging}
+    La résolution des bugs est divisée en plusieurs étapes :
+    \begin{itemize}
+        \item Reproduction du bug
+        \item Écriture d'un test unitaire qui reproduit le bug
+        \item Recherche de la source du problème
+        \item Correction du bug
+    \end{itemize}
+    \textbf{GitHub} est un outil crucial durant ce processus. Deux fonctionnalités de la plateforme sont notamment exploitées ici :
+    \begin{itemize}
+        \item Les tickets GitHub nous permettent de documenter le debugging en enregistrant une trace des actions prises pour corriger chaque bug
+        \item Afin de ne pas compromettre le fonctionnement de l'application, le debugging de chaque problème est réalisé sur une branche qui lui est propre. Lorsque le problème est réglé, cete branche est fusionnée à la branche principale de l'application à l'aide d'une pull request. Le graphe qui montre les différentes branches du projet est visible \href{https://github.com/vinpap/mathfinder/network}{ici}.
+    \end{itemize}
+    \subsection{Résolution des problèmes}
+    \textbf{Problème 1 : L'application crash quand on essaie de lui faire prédire les valeurs de deux colonnes ou plus (\href{https://github.com/vinpap/mathfinder/issues/2}{lien vers le ticket})}
+
+    Si un utilisateur tente d'entraîner son modèle en spécifiant plus de deux valeurs cibles, l'application crash avec une exception ValueError. Un utilisateur mentionne avoir reçu le message \textit{"y should be a 1d array, got an array of shape (200, 2) instead"}.
+
+    Ce problème est lié à une limitation du modèle de régression utilisé par Mathfinder : il ne peut générer qu'une seule valeur cible. Cette contrainte n'apparaît nul part sur l'interface cependant, et l'application permet malgré tout à l'utilisateur d'entrer plusieurs noms de colonne dans le formulaire. Deux mesures ont été mises en place pour régler ce bug :
+    \begin{itemize}
+        \item Le code Python a été modifié pour détecter l'apparition d'une exception ValueError. Si le format des données en entrée du modèle contient plus d'une dimension, on afiche alors un message d'erreur pour demander à l'utilisateur de n'entrer qu'un seul nom de colonne.
+        \item Le texte de l'interface a été mis à jour pour demander à l'utilisateur d'entrer UN nom de colonne.
+    \end{itemize}
+
+    \textbf{Problème 2 : L'application crash si on laisse des espaces avant ou après les points-virgules qui séparent les noms des colonnes (\href{https://github.com/vinpap/mathfinder/issues/3}{lien vers le ticket})}
+
+    L'application demande aux utilisateurs d'entrer le nom des colonnes à utiliser pour les calculs, en les séparant par des points-virgules. Cependant, certains utilisateurs reçoivent le message d'erreur suivant : \textit{"KeyError: <nom de la colonne> not in index"}. Ils ont observé que cela arrive uniquement lorsqu'il y a des espaces entre les points-virgules et les noms de colonne adjacents.
+
+    Ce problème apparaît à cause de la façon dont la séparation des noms de colonnes est réalisée. En effet, si on laisse des espaces avant ou après un point-virgule, celui-ci est rattaché au nom de colonne adjacent, qui ne correspond alors plus au nom de colonne dans les données, qui lui ne contient pas cet espace supplémentaire. La solution utilisée pour régler ce problème est de supprimer tous les espaces avant et après les noms de colonne après la séparation. 
+
+    \textbf{Problème 3 : L'application crash s'il manque des valeurs dans les données (\href{https://github.com/vinpap/mathfinder/issues/4}{lien vers le ticket})}
+
+    Lorsqu'il manque des valeurs dans les données entrées par l'utilisateur, l'application affiche une exception Python ValueError accompagnée du message \textit{"Input X contains NaN"}.
+
+    Comme le laisse entendre ce message, notre modèle d'IA ne peut pas traiter des données incomplètes. Deux options ont été envisagées :
+    \begin{itemize}
+        \item Supprimer automatiquement toutes les lignes des données auxquelles il manque des valeurs
+        \item Refuser les données de l'utilisateur en affichant un message d'erreur pour l'informer que ses données sont incomplètes.
+    \end{itemize}
+    C'est finalement cette deuxième option qui a été retenue. En effet, le fait que les données sont incomplètes laisse penser qu'elles n'ont pas été nettoyées de façon adéquate par l'utilisateur. Ainsi il est possible que d'autres étapes du nettoyage des données (e.g. suppression des valeurs aberrantes, standardisation éventuelle des données...) n'aient pas été réalisées correctement non plus. On choisira donc d'afficher un message d'erreur lui demandant de soumettre des données propres. En Python, un simple bloc try... except nous permet de déclencher l'affichage de l'erreur lorsque l'exception ValueError est détectée.
+    \subsection{CI/CD}
+    Comme nous l'avons vu, la rédaction de tests unitaires fait partie de la résolution des bugs. Développer des tests qui reproduisent nos bugs nous permet de valider notre processus de debugging. Tant que le test ne s'exécute pas avec succès, on considère que le bug n'est pas résolu. Ici, nous allons un peu plus loin en automatisant ces tests grâce à un processus de CI/CD. À l'aide de GitHub Actions, nous définissons ainsi des règles qui déclenchent l'exécution des tests à chaque fois que du nouveau code est intégré à notre branche Git principale, la branche master. Cela nous permet de renforcer la qualité du code en réduisant les risques que l'ajout de nouveau code crée des bugs dans notre application.
+    \subsection{Signaler un bug}
+    Enfin, une procédure a été mise en place pour permettre aux utilisateurs de signaler eux-mêmes les bugs et ainsi faciliter la correction de problèmes techniques à l'avenir. Pour cela, les utilisateurs doivent suivre cette procédure :
+    \begin{enumerate}
+        \item Depuis la \href{https://github.com/vinpap/mathfinder}{page d'accueil} du dépôt GitHub de Mathfinder, cliquer sur l'onglet "Tickets" en haut
+        \item Cliquer sur "Nouveau ticket"
+        \item Entrez un titre qui résume très brièvement le problème que vous avez rencontré. Puis entrez une description qui détaille le plus précisément possible les éléments suivants :
+        \begin{itemize}
+            \item une description du problème
+            \item une capture d'écran qui montre le problème, si possible
+            \item une suite d'étapes à suivre pour reproduire le problème
+        \end{itemize}
+        \item validez la création du ticket.
+    \end{enumerate}
+
     \section{Conclusion}
     Dans ce dossier, nous avons vu comment résoudre les bugs d'une application tout en utilisant la CI/CD pour protéger la qualité du code. Nous avons également vu comment mettre en place un système de suivi et d'alerte qui permet à de multiples utilisateurs de suivre l'évolution de leurs modèles d'IA. La structure présentée dans ce dossier est améliorable. On pourra ainsi envisager de créer son propre serveur SMTP ou encore d'exécuter MLFlow sur un serveur dédié.
 \end{document}
